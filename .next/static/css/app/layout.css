@@ -743,6 +743,9 @@ video {
 .h-px {
   height: 1px;
 }
+.h-screen {
+  height: 100vh;
+}
 .w-2 {
   width: 0.5rem;
 }
@@ -760,6 +763,9 @@ video {
 }
 .w-9 {
   width: 2.25rem;
+}
+.w-96 {
+  width: 24rem;
 }
 .w-full {
   width: 100%;

@@ -40,6 +40,8 @@
       Radar,
       ResponsiveContainer,
     } from 'recharts';
+    import { auth } from '@/lib/firebase';
+    import { signOut } from 'firebase/auth';
 
     // Interface for history entries
     interface HistoryEntry {
