@@ -40,6 +40,8 @@
       Radar,
       ResponsiveContainer,
     } from 'recharts';
+    import { auth, db } from '@/lib/firebase';
+    import { collection, addDoc, getDocs, query, where, deleteDoc, doc } from 'firebase/firestore';
 
     // Interface for history entries
     interface HistoryEntry {
@@ -216,18 +218,34 @@
         });
 
         setEnabledMetrics(initialEnabled);
-
-        const savedHistory = localStorage.getItem('brandStrategyHistory');
-        if (savedHistory) {
-          setHistory(JSON.parse(savedHistory));
-        }
+        fetchHistory();
       }, []);
 
+      const fetchHistory = async () => {
+        if (!auth.currentUser) return;
+        const historyCollection = collection(db, 'history');
+        const q = query(historyCollection, where('userId', '==', auth.currentUser.uid));
+        try {
+          const querySnapshot = await getDocs(q);
+          const fetchedHistory = querySnapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          } as HistoryEntry));
+          setHistory(fetchedHistory);
+        } catch (error) {
+          console.error("Error fetching history:", error);
+        }
+      };
 
       // Save current state to history
-      const saveToHistory = () => {
+      const saveToHistory = async () => {
         if (!brandName.trim()) {
           alert('Please enter a brand name before saving');
+          return;
+        }
+
+        if (!auth.currentUser) {
+          alert('Please log in to save history');
           return;
         }
 
@@ -239,9 +257,16 @@
           scores: { ...scores }
         };
 
-        const updatedHistory = [newEntry, ...history];
-        setHistory(updatedHistory);
-        localStorage.setItem('brandStrategyHistory', JSON.stringify(updatedHistory));
+        try {
+          const historyCollection = collection(db, 'history');
+          await addDoc(historyCollection, {
+            ...newEntry,
+            userId: auth.currentUser.uid
+          });
+          fetchHistory();
+        } catch (error) {
+          console.error("Error saving to Firestore:", error);
+        }
       };
 
       // Load a specific history entry
@@ -364,20 +389,24 @@
           };
 
         // Add delete functionality
-        const handleDeleteEntry = (entry: HistoryEntry) => {
+        const handleDeleteEntry = async (entry: HistoryEntry) => {
             setEntryToDelete(entry);
             setDeleteDialogOpen(true);
             setDeleteConfirmationText('');
         };
 
-        const confirmDelete = () => {
+        const confirmDelete = async () => {
             if (entryToDelete && deleteConfirmationText === entryToDelete.brandName) {
-                const updatedHistory = history.filter(entry => entry.id !== entryToDelete.id);
-                setHistory(updatedHistory);
-                localStorage.setItem('brandStrategyHistory', JSON.stringify(updatedHistory));
-                setDeleteDialogOpen(false);
-                setEntryToDelete(null);
-                setDeleteConfirmationText('');
+              try {
+                const docRef = doc(db, 'history', entryToDelete.id);
+                await deleteDoc(docRef);
+                fetchHistory();
+              } catch (error) {
+                console.error("Error deleting from Firestore:", error);
+              }
+              setDeleteDialogOpen(false);
+              setEntryToDelete(null);
+              setDeleteConfirmationText('');
             }
         };
 
