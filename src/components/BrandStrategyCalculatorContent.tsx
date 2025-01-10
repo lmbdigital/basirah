@@ -42,6 +42,12 @@
     } from 'recharts';
     import { auth, db } from '@/lib/firebase';
     import { collection, addDoc, getDocs, query, where, deleteDoc, doc } from 'firebase/firestore';
+    import {
+      DropdownMenu,
+      DropdownMenuTrigger,
+      DropdownMenuContent,
+      DropdownMenuItem,
+    } from "@/components/ui/dropdown-menu";
 
     // Interface for history entries
     interface HistoryEntry {
@@ -410,6 +416,8 @@
             }
         };
 
+      const uniqueBrandNames = [...new Set(history.map(entry => entry.brandName))];
+
       return (
         <>
             <div className="w-full max-w-6xl mx-auto space-y-8 p-4">
@@ -419,15 +427,38 @@
               <CardTitle>Brand Information</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="flex gap-4">
+              <div className="flex gap-4 items-center">
                 <div className="flex-grow">
                   <Label htmlFor="brandName">Brand Name</Label>
-                  <Input
-                    id="brandName"
-                    value={brandName}
-                    onChange={(e) => setBrandName(e.target.value)}
-                    placeholder="Enter brand name"
-                  />
+                  <div className="relative flex items-center">
+                    <Input
+                      id="brandName"
+                      value={brandName}
+                      onChange={(e) => setBrandName(e.target.value)}
+                      placeholder="Enter brand name"
+                      className="flex-1"
+                    />
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="absolute right-2 top-1/2 -translate-y-1/2">
+                          <ChevronDown className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="start" className="w-[calc(100%-2rem)]">
+                        {uniqueBrandNames.map((name) => {
+                          const count = history.filter(entry => entry.brandName === name).length;
+                          return (
+                            <DropdownMenuItem key={name} onSelect={() => setBrandName(name)}>
+                              {name}
+                              <span className="ml-auto text-xs italic text-muted-foreground">
+                                {count} results
+                              </span>
+                            </DropdownMenuItem>
+                          );
+                        })}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
                 </div>
                 <div className="flex items-end">
                   <Button
