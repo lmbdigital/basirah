@@ -31,7 +31,7 @@
       CollapsibleContent,
       CollapsibleTrigger,
     } from "@/components/ui/collapsible";
-    import { AlertCircle, CheckCircle2, XCircle, HelpCircle, ChevronDown, ChevronUp, Save, Trash2, ArrowDown, ArrowUp } from "lucide-react";
+    import { AlertCircle, CheckCircle2, XCircle, HelpCircle, ChevronDown, ChevronUp, Save, Trash2, ArrowDown, ArrowUp, File } from "lucide-react";
     import {
       RadarChart,
       PolarGrid,
@@ -457,6 +457,49 @@
         return 0;
       });
 
+      const exportToCSV = (entry: HistoryEntry) => {
+        const csvRows = [];
+        const headers = ['Brand Name', 'Date'];
+        Object.entries(allMetrics).forEach(([category, categoryMetrics]) => {
+          Object.values(categoryMetrics).forEach((details) => {
+            headers.push(details.label);
+          });
+        });
+        Object.keys(entry.scores).forEach(score => {
+          if (score !== 'overall') {
+            headers.push(score.charAt(0).toUpperCase() + score.slice(1));
+          }
+        });
+        csvRows.push(headers.join(','));
+
+        const values = [
+          entry.brandName,
+          formatDate(entry.date).replace(/,/g, ''),
+        ];
+        Object.keys(metrics).forEach(metric => {
+          if (entry.metrics[metric]) {
+            values.push(entry.metrics[metric]);
+          }
+        });
+        Object.keys(entry.scores).forEach(score => {
+          if (score !== 'overall') {
+            values.push(entry.scores[score].toString());
+          }
+        });
+        csvRows.push(values.join(','));
+
+        const csvData = csvRows.join('\n');
+        const blob = new Blob([csvData], { type: 'text/csv' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `${entry.brandName.replace(/\s/g, '_')}_${formatDate(entry.date).replace(/,/g, '')}_Brand_Metrics_Results.csv`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      };
+
       return (
         <>
             <div className="w-full max-w-6xl mx-auto space-y-8 p-4">
@@ -697,13 +740,23 @@
                             </ResponsiveContainer>
                           </div>
                         </div>
-                        <Button
-                          variant="outline"
-                          onClick={() => loadHistoryEntry(entry)}
-                          className="w-full"
-                        >
-                          Load These Results
-                        </Button>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            onClick={() => loadHistoryEntry(entry)}
+                            className="flex-1"
+                          >
+                            Load These Results
+                          </Button>
+                          <Button
+                            variant="outline"
+                            onClick={() => exportToCSV(entry)}
+                            className="flex-1 flex items-center gap-2"
+                          >
+                            <File className="h-4 w-4" />
+                            Export to CSV
+                          </Button>
+                        </div>
                       </CollapsibleContent>
                     </div>
                   </Collapsible>
