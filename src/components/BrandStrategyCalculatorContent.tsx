@@ -42,14 +42,6 @@
     } from 'recharts';
     import { auth, db } from '@/lib/firebase';
     import { collection, addDoc, getDocs, query, where, deleteDoc, doc } from 'firebase/firestore';
-    import {
-      DropdownMenu,
-      DropdownMenuTrigger,
-      DropdownMenuContent,
-      DropdownMenuItem,
-    } from "@/components/ui/dropdown-menu";
-    import AutoComplete from './AutoComplete';
-    import { useRouter } from 'next/navigation';
 
     // Interface for history entries
     interface HistoryEntry {
@@ -215,10 +207,8 @@
         const [entryToDelete, setEntryToDelete] = useState<HistoryEntry | null>(null);
         const [deleteConfirmationText, setDeleteConfirmationText] = useState('');
       const inputRef = useRef<HTMLInputElement>(null);
-      const dropdownRef = useRef<HTMLDivElement>(null);
-      const [dropdownOpen, setDropdownOpen] = useState(false);
-      const [isComposing, setIsComposing] = useState(false);
-      const router = useRouter();
+      const suggestionsRef = useRef<HTMLDivElement>(null);
+      const [showSuggestions, setShowSuggestions] = useState(false);
 
       // Initialize enabled status
       useEffect(() => {
@@ -425,8 +415,22 @@
 
       const uniqueBrandNames = [...new Set(history.map(entry => entry.brandName))];
       const filteredBrandNames = uniqueBrandNames.filter(name =>
-        name.toLowerCase().startsWith(brandName.toLowerCase())
+        name.toLowerCase().includes(brandName.toLowerCase())
       );
+
+      const handleBrandNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = e.target.value;
+        setBrandName(value);
+        setShowSuggestions(true);
+      };
+
+      const handleSuggestionClick = (name: string) => {
+        setBrandName(name);
+        setShowSuggestions(false);
+        if (inputRef.current) {
+          inputRef.current.focus();
+        }
+      };
 
       return (
         <>
@@ -438,49 +442,39 @@
             </CardHeader>
             <CardContent>
               <div className="flex gap-4 items-center">
-                <div className="flex-grow">
+                <div className="flex-grow relative">
                   <Label htmlFor="brandName">Brand Name</Label>
-                  <div className="relative flex items-center">
+                  <div className="relative">
                     <Input
                       id="brandName"
-                      value={brandName}
-                      onChange={(e) => {
-                        setBrandName(e.target.value);
-                        if (e.target.value) {
-                          setDropdownOpen(true);
-                        } else {
-                          setDropdownOpen(false);
-                        }
-                      }}
-                      onCompositionStart={() => setIsComposing(true)}
-                      onCompositionEnd={() => setIsComposing(false)}
-                      placeholder="Enter brand name"
-                      className="flex-1"
                       ref={inputRef}
+                      value={brandName}
+                      onChange={handleBrandNameChange}
+                      placeholder="Enter brand name"
+                      className="w-full"
                     />
-                    <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen} focusOnOpen={false}>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="absolute right-2 top-1/2 -translate-y-1/2">
-                          <ChevronDown className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="start" style={{ width: inputRef.current?.offsetWidth }} >
+                    {showSuggestions && filteredBrandNames.length > 0 && (
+                      <div
+                        ref={suggestionsRef}
+                        className="absolute z-50 w-full mt-1 bg-white rounded-md shadow-lg border border-gray-200 max-h-60 overflow-auto"
+                      >
                         {filteredBrandNames.map((name) => {
                           const count = history.filter(entry => entry.brandName === name).length;
                           return (
-                            <DropdownMenuItem key={name} onSelect={() => {
-                              setBrandName(name);
-                              setDropdownOpen(false);
-                            }}>
-                              {name}
-                              <span className="ml-auto text-xs italic text-muted-foreground">
+                            <div
+                              key={name}
+                              className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex justify-between items-center"
+                              onClick={() => handleSuggestionClick(name)}
+                            >
+                              <span>{name}</span>
+                              <span className="text-sm text-gray-500">
                                 {count} results
                               </span>
-                            </DropdownMenuItem>
+                            </div>
                           );
                         })}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                      </div>
+                    )}
                   </div>
                 </div>
                 <div className="flex items-end">
