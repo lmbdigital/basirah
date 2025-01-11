@@ -1,6 +1,6 @@
 "use client";
 
-    import React, { useState, useEffect, useCallback } from 'react';
+    import React, { useState, useEffect, useCallback, useRef } from 'react';
     import {
       Card,
       CardContent,
@@ -48,6 +48,8 @@
       DropdownMenuContent,
       DropdownMenuItem,
     } from "@/components/ui/dropdown-menu";
+    import AutoComplete from './AutoComplete';
+    import { useRouter } from 'next/navigation';
 
     // Interface for history entries
     interface HistoryEntry {
@@ -212,6 +214,11 @@
         const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
         const [entryToDelete, setEntryToDelete] = useState<HistoryEntry | null>(null);
         const [deleteConfirmationText, setDeleteConfirmationText] = useState('');
+      const inputRef = useRef<HTMLInputElement>(null);
+      const dropdownRef = useRef<HTMLDivElement>(null);
+      const [dropdownOpen, setDropdownOpen] = useState(false);
+      const [isComposing, setIsComposing] = useState(false);
+      const router = useRouter();
 
       // Initialize enabled status
       useEffect(() => {
@@ -417,6 +424,9 @@
         };
 
       const uniqueBrandNames = [...new Set(history.map(entry => entry.brandName))];
+      const filteredBrandNames = uniqueBrandNames.filter(name =>
+        name.toLowerCase().startsWith(brandName.toLowerCase())
+      );
 
       return (
         <>
@@ -434,21 +444,34 @@
                     <Input
                       id="brandName"
                       value={brandName}
-                      onChange={(e) => setBrandName(e.target.value)}
+                      onChange={(e) => {
+                        setBrandName(e.target.value);
+                        if (e.target.value) {
+                          setDropdownOpen(true);
+                        } else {
+                          setDropdownOpen(false);
+                        }
+                      }}
+                      onCompositionStart={() => setIsComposing(true)}
+                      onCompositionEnd={() => setIsComposing(false)}
                       placeholder="Enter brand name"
                       className="flex-1"
+                      ref={inputRef}
                     />
-                    <DropdownMenu>
+                    <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen} focusOnOpen={false}>
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="icon" className="absolute right-2 top-1/2 -translate-y-1/2">
                           <ChevronDown className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="start" className="w-[calc(100%-2rem)]">
-                        {uniqueBrandNames.map((name) => {
+                      <DropdownMenuContent align="start" style={{ width: inputRef.current?.offsetWidth }} >
+                        {filteredBrandNames.map((name) => {
                           const count = history.filter(entry => entry.brandName === name).length;
                           return (
-                            <DropdownMenuItem key={name} onSelect={() => setBrandName(name)}>
+                            <DropdownMenuItem key={name} onSelect={() => {
+                              setBrandName(name);
+                              setDropdownOpen(false);
+                            }}>
                               {name}
                               <span className="ml-auto text-xs italic text-muted-foreground">
                                 {count} results
