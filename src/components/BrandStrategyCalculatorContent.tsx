@@ -31,7 +31,7 @@
       CollapsibleContent,
       CollapsibleTrigger,
     } from "@/components/ui/collapsible";
-    import { AlertCircle, CheckCircle2, XCircle, HelpCircle, ChevronDown, ChevronUp, Save, Trash2 } from "lucide-react";
+    import { AlertCircle, CheckCircle2, XCircle, HelpCircle, ChevronDown, ChevronUp, Save, Trash2, ArrowDown, ArrowUp } from "lucide-react";
     import {
       RadarChart,
       PolarGrid,
@@ -209,6 +209,10 @@
       const inputRef = useRef<HTMLInputElement>(null);
       const suggestionsRef = useRef<HTMLDivElement>(null);
       const [showSuggestions, setShowSuggestions] = useState(false);
+      const [sortOrder, setSortOrder] = useState<{ column: string; direction: 'asc' | 'desc' }>({
+        column: 'date',
+        direction: 'desc',
+      });
 
       // Initialize enabled status
       useEffect(() => {
@@ -432,6 +436,27 @@
         }
       };
 
+      const handleSort = (column: string) => {
+        setSortOrder(prev => ({
+          column,
+          direction: prev.column === column && prev.direction === 'asc' ? 'desc' : 'asc',
+        }));
+      };
+
+      const sortedHistory = [...history].sort((a, b) => {
+        const { column, direction } = sortOrder;
+        if (column === 'date') {
+          const dateA = new Date(a.date).getTime();
+          const dateB = new Date(b.date).getTime();
+          return direction === 'asc' ? dateA - dateB : dateB - dateA;
+        } else if (column === 'brandName') {
+          return direction === 'asc'
+            ? a.brandName.localeCompare(b.brandName)
+            : b.brandName.localeCompare(a.brandName);
+        }
+        return 0;
+      });
+
       return (
         <>
             <div className="w-full max-w-6xl mx-auto space-y-8 p-4">
@@ -571,7 +596,34 @@
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                {history.map((entry) => (
+                <div className="flex items-center justify-end mb-2">
+                  <span className="font-medium mr-2">Sort By:</span>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleSort('date')}
+                      className="flex items-center gap-1"
+                    >
+                      Date
+                      {sortOrder.column === 'date' && (
+                        sortOrder.direction === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                      )}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleSort('brandName')}
+                      className="flex items-center gap-1"
+                    >
+                      Name
+                      {sortOrder.column === 'brandName' && (
+                        sortOrder.direction === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                      )}
+                    </Button>
+                  </div>
+                </div>
+                {sortedHistory.map((entry) => (
                   <Collapsible
                     key={entry.id}
                     open={expandedHistory === entry.id}
