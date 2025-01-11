@@ -460,14 +460,16 @@
       const exportToCSV = (entry: HistoryEntry) => {
         const csvRows = [];
         const headers = ['Brand Name', 'Date'];
+        const metricLabels: Record<string, string> = {};
         Object.entries(allMetrics).forEach(([category, categoryMetrics]) => {
-          Object.values(categoryMetrics).forEach((details) => {
+          Object.entries(categoryMetrics).forEach(([metric, details]) => {
+            metricLabels[metric] = details.label;
             headers.push(details.label);
           });
         });
         Object.keys(entry.scores).forEach(score => {
           if (score !== 'overall') {
-            headers.push(score.charAt(0).toUpperCase() + score.slice(1));
+            headers.push(`${score.charAt(0).toUpperCase() + score.slice(1)} Score`);
           }
         });
         csvRows.push(headers.join(','));
@@ -476,16 +478,21 @@
           entry.brandName,
           formatDate(entry.date).replace(/,/g, ''),
         ];
+        
+        // Add metric values in the same order as headers
         Object.keys(metrics).forEach(metric => {
           if (entry.metrics[metric]) {
             values.push(entry.metrics[metric]);
           }
         });
-        Object.keys(entry.scores).forEach(score => {
-          if (score !== 'overall') {
-            values.push(entry.scores[score].toString());
+
+        // Add scores
+        Object.entries(entry.scores).forEach(([category, score]) => {
+          if (category !== 'overall') {
+            values.push(score.toFixed(2));
           }
         });
+
         csvRows.push(values.join(','));
 
         const csvData = csvRows.join('\n');
